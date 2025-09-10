@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { SuggestionSchema } from '@/ai/schemas';
 
 const SuggestCompatibleSnippetsInputSchema = z.object({
   code: z
@@ -24,15 +25,6 @@ const SuggestCompatibleSnippetsInputSchema = z.object({
 export type SuggestCompatibleSnippetsInput = z.infer<
   typeof SuggestCompatibleSnippetsInputSchema
 >;
-
-const SuggestionSchema = z.object({
-  code: z.string().describe('The compatible code snippet.'),
-  explanation: z
-    .string()
-    .describe(
-      'An explanation of why the original code is not compatible and how the suggestion fixes it.'
-    ),
-});
 
 const SuggestCompatibleSnippetsOutputSchema = z.object({
   suggestions: z
@@ -56,6 +48,8 @@ const prompt = ai.definePrompt({
   prompt: `You are a code analysis tool that suggests compatible code snippets based on browser baseline data.
 
   Analyze the following code and suggest compatible code snippets for the target browsers.
+
+  When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If you make a suggestion for a specific file, you MUST include the 'filePath' field in your response for that suggestion, extracting the path from the comment.
 
   Code: {{{code}}}
   Target Browsers: {{{targetBrowsers}}}

@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { PolyfillSchema } from '@/ai/schemas';
 
 const GeneratePolyfillsInputSchema = z.object({
   codeSnippet: z
@@ -20,19 +21,10 @@ const GeneratePolyfillsInputSchema = z.object({
 });
 export type GeneratePolyfillsInput = z.infer<typeof GeneratePolyfillsInputSchema>;
 
-const PolyfillSchema = z.object({
-  code: z.string().describe('The polyfill code snippet.'),
-  explanation: z
-    .string()
-    .describe(
-      'An explanation of what this polyfill does and which feature it is for.'
-    ),
-});
-
 const GeneratePolyfillsOutputSchema = z.object({
   polyfills: z
     .array(PolyfillSchema)
-    .describe('An array of polyfills with explanations. If no polyfills are needed, return an empty array.'),
+    .describe('An array of polyfills with explanations. If no polyfills are needed, return an empty array or an array with a comment in the code field.'),
 });
 export type GeneratePolyfillsOutput = z.infer<typeof GeneratePolyfillsOutputSchema>;
 
@@ -49,7 +41,9 @@ const prompt = ai.definePrompt({
 
 You will generate polyfills for the unsupported features in the target browsers based on the baseline data. The generated code must be well-formatted JavaScript. For each polyfill, provide a clear explanation of what it does and which feature it addresses.
 
-If no polyfills are required for the given code and target browsers, return an empty array for the 'polyfills' field.
+When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If a polyfill is needed for a specific file, you MUST include the 'filePath' field in your response for that polyfill, extracting the path from the comment.
+
+If no polyfills are required for the given code and target browsers, return an array with a single item containing an explanatory comment in the 'code' field and a clear explanation.
 
 Code Snippet: {{{codeSnippet}}}
 Target Browsers: {{{targetBrowsers}}}

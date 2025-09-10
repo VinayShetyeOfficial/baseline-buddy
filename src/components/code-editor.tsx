@@ -54,7 +54,7 @@ export function CodeEditor({ value, onChange }: CodeEditorProps) {
                 <div className="w-3 h-3 rounded-full bg-[#5fcf65]"></div>
             </div>
             <div className="text-sm font-medium ml-2">
-              BaselineGuard Editor
+              Editor
             </div>
         </div>
         <div className="flex items-center gap-1">

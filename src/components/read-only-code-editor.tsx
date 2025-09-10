@@ -2,10 +2,11 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { githubDark } from '@uiw/codemirror-theme-github';
-import { Download, Copy, Check, Expand, Minimize } from 'lucide-react';
+import { Download, Copy, Check, Expand, Minimize, Github, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogClose } from '@/components/ui/dialog';
@@ -14,15 +15,18 @@ import { cn } from '@/lib/utils';
 
 interface ReadOnlyCodeEditorProps {
   value: string;
+  filePath?: string;
 }
 
-export function ReadOnlyCodeEditor({ value }: ReadOnlyCodeEditorProps) {
+export function ReadOnlyCodeEditor({ value, filePath }: ReadOnlyCodeEditorProps) {
   const { toast } = useToast();
   const [isCopied, setIsCopied] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const lineCount = value.split('\n').length;
   const charCount = value.length;
+  const showExpandButton = lineCount > 15;
+  const simpleFilePath = filePath ? filePath.split('/').slice(7).join('/') : 'Editor';
 
   const handleCopy = () => {
     navigator.clipboard.writeText(value);
@@ -52,7 +56,11 @@ export function ReadOnlyCodeEditor({ value }: ReadOnlyCodeEditorProps) {
                 <div className="w-3 h-3 rounded-full bg-[#5fcf65]"></div>
             </div>
             <div className="text-sm font-medium ml-2">
-              BaselineGuard Editor
+              {filePath ? (
+                <Link href={filePath} target="_blank" className="flex items-center gap-1.5 hover:text-white hover:underline">
+                    <Github size={14}/> {simpleFilePath} <LinkIcon size={12} className="ml-1" />
+                </Link>
+              ) : 'Editor'}
             </div>
         </div>
         <div className="flex items-center gap-1">
@@ -62,7 +70,7 @@ export function ReadOnlyCodeEditor({ value }: ReadOnlyCodeEditorProps) {
           <Button variant="ghost" size="icon" className="h-7 w-7 text-[#7b8aa1] hover:bg-[#1e293b]" onClick={handleCopy}>
             {isCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
           </Button>
-          {lineCount > 15 && (
+          {showExpandButton && (
             <Button variant="ghost" size="icon" className="h-7 w-7 text-[#7b8aa1] hover:bg-[#1e293b]" onClick={() => setIsExpanded(!isExpanded)}>
               {isDialog ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
             </Button>

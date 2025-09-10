@@ -15,7 +15,7 @@ export function Header() {
           </Link>
           <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
-              <Link href="https://baseline.devpost.com/" target="_blank">Hackathon Rules</Link>
+              <Link href="https://baseline.devpost.com/" target="_blank">Hackathon</Link>
             </Button>
             <Button asChild>
               <Link href="https://github.com/firebase/studio-samples/tree/main/baseline-buddy" target="_blank">View on GitHub</Link>

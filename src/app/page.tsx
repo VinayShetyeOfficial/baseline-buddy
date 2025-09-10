@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, AlertCircle, Sparkles, Lightbulb, Puzzle, FileText, Code, Github } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { checkCodeCompatibility, CheckCodeCompatibilityOutput } from '@/ai/flows/check-code-compatibility';
+import { checkCodeCompatibility, CheckCodeCompatibilityOutput, BrowserCompatibilityData } from '@/ai/flows/check-code-compatibility';
 import { suggestCompatibleSnippets, SuggestCompatibleSnippetsOutput } from '@/ai/flows/suggest-compatible-snippets';
 import { generatePolyfills, GeneratePolyfillsOutput } from '@/ai/flows/generate-polyfills';
+import { analyzeGitHubRepository, AnalyzeGitHubRepositoryOutput } from '@/ai/flows/analyze-github-repo';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CodeEditor } from '@/components/code-editor';
 import { BrowserSelector } from '@/components/browser-selector';
@@ -17,7 +18,8 @@ import ReactMarkdown from 'react-markdown';
 import { Input } from '@/components/ui/input';
 import { ReadOnlyCodeEditor } from '@/components/read-only-code-editor';
 import { js_beautify } from 'js-beautify';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Polyfill, Suggestion } from '@/ai/schemas';
+import { CompatibilityChart } from '@/components/compatibility-chart';
 
 
 const defaultCodeSnippet = `// Paste your code here for analysis...
@@ -58,6 +60,8 @@ const EmptyState = ({ icon, title, description }: { icon: React.ReactNode, title
 export default function Home() {
   const { toast } = useToast();
   const [code, setCode] = useState(defaultCodeSnippet);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [activeCodeTab, setActiveCodeTab] = useState('snippet');
   const [selectedBrowsers, setSelectedBrowsers] = useState<string[]>([
     'chrome',
     'firefox',
@@ -65,16 +69,16 @@ export default function Home() {
     'edge',
   ]);
 
-  const [compatibilityResult, setCompatibilityResult] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<SuggestCompatibleSnippetsOutput['suggestions']>([]);
-  const [polyfills, setPolyfills] = useState<GeneratePolyfillsOutput['polyfills']>([]);
+  const [compatibilityResult, setCompatibilityResult] = useState<CheckCodeCompatibilityOutput | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [polyfills, setPolyfills] = useState<Polyfill[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('compatibility');
 
   const handleAnalyze = async () => {
-    if (!code.trim()) {
+    if (activeCodeTab === 'snippet' && !code.trim()) {
       toast({
         variant: 'destructive',
         title: 'Input Error',
@@ -82,6 +86,15 @@ export default function Home() {
       });
       return;
     }
+    if (activeCodeTab === 'repository' && !repoUrl.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Input Error',
+        description: 'Please enter a GitHub repository URL.',
+      });
+      return;
+    }
+
     if (selectedBrowsers.length === 0) {
         toast({
             variant: 'destructive',
@@ -98,43 +111,51 @@ export default function Home() {
     setPolyfills([]);
 
     try {
-        const compatibilityPromise = checkCodeCompatibility({ codeSnippet: code });
-        const suggestionsPromise = suggestCompatibleSnippets({ code, targetBrowsers: selectedBrowsers.join(', ') });
-        const polyfillsPromise = generatePolyfills({ codeSnippet: code, targetBrowsers: selectedBrowsers.join(', ') });
-        
-        const [compat, sugg, poly] = await Promise.all([
-            compatibilityPromise,
-            suggestionsPromise,
-            polyfillsPromise
-        ]);
-
-        setCompatibilityResult(compat.compatibilityReport);
-        
+        let analysisResult: AnalyzeGitHubRepositoryOutput;
         const beautifyOptions = { indent_size: 2, space_in_empty_paren: true };
-        const beautifiedSuggestions = sugg.suggestions.map(s => ({
+
+        if (activeCodeTab === 'repository') {
+            analysisResult = await analyzeGitHubRepository({
+                repoUrl,
+                targetBrowsers: selectedBrowsers.join(', '),
+            });
+        } else {
+            const analysisCode = code;
+            const [compat, sugg, poly] = await Promise.all([
+                checkCodeCompatibility({ codeSnippet: analysisCode, targetBrowsers: selectedBrowsers.join(', ') }),
+                suggestCompatibleSnippets({ code: analysisCode, targetBrowsers: selectedBrowsers.join(', ') }),
+                generatePolyfills({ codeSnippet: analysisCode, targetBrowsers: selectedBrowsers.join(', ') })
+            ]);
+            analysisResult = { compatibilityReport: compat, suggestions: sugg, polyfills: poly };
+        }
+
+        setCompatibilityResult(analysisResult.compatibilityReport);
+        
+        const beautifiedSuggestions = analysisResult.suggestions.suggestions.map(s => ({
             ...s,
             code: js_beautify(s.code, beautifyOptions)
         }));
         setSuggestions(beautifiedSuggestions);
 
-        const beautifiedPolyfills = poly.polyfills.map(p => ({
+        const beautifiedPolyfills = analysisResult.polyfills.polyfills.map(p => ({
             ...p,
-            code: p.code ? js_beautify(p.code, beautifyOptions) : ''
+            code: p.code ? js_beautify(p.code, beautifyOptions) : '',
+            explanation: p.explanation || ''
         }));
         setPolyfills(beautifiedPolyfills);
 
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
         
-        if (errorMessage.includes('503 Service Unavailable') || errorMessage.includes('model is overloaded')) {
-            setError('The AI model is currently overloaded. Please try again in a few moments.');
+        if (errorMessage.includes('429 Too Many Requests') || errorMessage.includes('model is overloaded')) {
+            setError('The AI model is currently busy or rate limited. Please try again in a few moments.');
             toast({
                 variant: 'destructive',
                 title: 'Service Unavailable',
                 description: 'The AI model is currently busy. Please try again later.',
             });
         } else {
-            setError('An error occurred during analysis. Please check your browser console for more technical details.');
+            setError(`An error occurred during analysis. ${errorMessage}`);
             toast({
                 variant: 'destructive',
                 title: 'Error Performing Analysis',
@@ -168,7 +189,7 @@ export default function Home() {
                   </CardDescription>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="snippet" className="w-full">
+                <Tabs defaultValue="snippet" className="w-full" onValueChange={setActiveCodeTab}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="snippet"><Code size={16} className="mr-2"/> Code Snippet</TabsTrigger>
                     <TabsTrigger value="repository"><Github size={16} className="mr-2"/> GitHub Repository</TabsTrigger>
@@ -181,7 +202,7 @@ export default function Home() {
                   <TabsContent value="repository" className="pt-4 space-y-4">
                       <div>
                         <label htmlFor="repo-url" className="text-sm font-medium">Repository URL</label>
-                        <Input id="repo-url" placeholder="https://github.com/user/repo" className="mt-1"/>
+                        <Input id="repo-url" placeholder="https://github.com/user/repo" className="mt-1" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} />
                         <p className="text-xs text-muted-foreground mt-1">Enter the public URL of a GitHub repository to analyze.</p>
                       </div>
                   </TabsContent>
@@ -231,26 +252,31 @@ export default function Home() {
                             <>
                                 <TabsContent value="compatibility">
                                     {compatibilityResult ? (
-                                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground">
-                                            <ReactMarkdown
-                                                components={{
-                                                    code({ node, className, children, ...props }) {
-                                                        const match = /language-(\w+)/.exec(className || '');
-                                                        const code = String(children).replace(/\n$/, '');
-                                                        return match ? (
-                                                            <div className="my-4 rounded-xl border border-border shadow-lg overflow-hidden">
-                                                              <ReadOnlyCodeEditor value={code} />
-                                                            </div>
-                                                        ) : (
-                                                            <code className={className} {...props}>
-                                                                {children}
-                                                            </code>
-                                                        );
-                                                    },
-                                                }}
-                                            >
-                                                {compatibilityResult}
-                                            </ReactMarkdown>
+                                        <div className="space-y-6">
+                                            {compatibilityResult.browserData && compatibilityResult.browserData.length > 0 && (
+                                                <CompatibilityChart data={compatibilityResult.browserData} />
+                                            )}
+                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground">
+                                                <ReactMarkdown
+                                                    components={{
+                                                        code({ node, className, children, ...props }) {
+                                                            const match = /language-(\w+)/.exec(className || '');
+                                                            const code = String(children).replace(/\n$/, '');
+                                                            return match ? (
+                                                                <div className="my-4 rounded-xl border border-border shadow-lg overflow-hidden">
+                                                                <ReadOnlyCodeEditor value={code} />
+                                                                </div>
+                                                            ) : (
+                                                                <code className={className} {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        },
+                                                    }}
+                                                >
+                                                    {compatibilityResult.compatibilityReport}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     ) : (
                                         <EmptyState 
@@ -271,7 +297,7 @@ export default function Home() {
                                                         </ReactMarkdown>
                                                     </div>
                                                      <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
-                                                        <ReadOnlyCodeEditor value={suggestion.code} />
+                                                        <ReadOnlyCodeEditor value={suggestion.code} filePath={suggestion.filePath} />
                                                     </div>
                                                 </div>
                                             ))}
@@ -289,22 +315,33 @@ export default function Home() {
                                         <div className="space-y-6">
                                             {polyfills.map((polyfill, index) => (
                                                 <div key={index}>
-                                                     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground mb-2">
-                                                        <ReactMarkdown>
-                                                            {polyfill.explanation}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                    <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
-                                                        <ReadOnlyCodeEditor value={polyfill.code} />
-                                                    </div>
+                                                     {polyfill.explanation && (
+                                                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground mb-2">
+                                                            <ReactMarkdown>
+                                                                {polyfill.explanation}
+                                                            </ReactMarkdown>
+                                                        </div>
+                                                    )}
+                                                    {(polyfill.code && polyfill.code.trim() !== '' && !polyfill.code.trim().startsWith('//')) ? (
+                                                        <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
+                                                            <ReadOnlyCodeEditor value={polyfill.code} filePath={polyfill.filePath}/>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             ))}
+                                            {polyfills.every(p => !p.code || p.code.trim() === '' || p.code.trim().startsWith('//')) && (
+                                                <EmptyState 
+                                                    icon={<Puzzle className="h-12 w-12 text-primary" />}
+                                                    title="No polyfills needed"
+                                                    description="Based on your code and selected browsers, no polyfills are required."
+                                                />
+                                            )}
                                         </div>
                                      ) : (
                                         <EmptyState 
                                             icon={<Puzzle className="h-12 w-12 text-primary" />}
-                                            title="No polyfills needed"
-                                            description="Based on your code and selected browsers, no polyfills are required."
+                                            title="No polyfills generated yet"
+                                            description="Polyfills for any unsupported features will be shown here after analysis."
                                         />
                                     )}
                                 </TabsContent>
