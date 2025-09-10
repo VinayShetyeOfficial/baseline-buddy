@@ -4,12 +4,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, AlertCircle, Sparkles, Lightbulb, Puzzle, FileText, Code, Github } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, Lightbulb, Puzzle, FileText, Code, Github, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { checkCodeCompatibility, CheckCodeCompatibilityOutput, BrowserCompatibilityData } from '@/ai/flows/check-code-compatibility';
+import { checkCodeCompatibility, CheckCodeCompatibilityOutput } from '@/ai/flows/check-code-compatibility';
 import { suggestCompatibleSnippets, SuggestCompatibleSnippetsOutput } from '@/ai/flows/suggest-compatible-snippets';
 import { generatePolyfills, GeneratePolyfillsOutput } from '@/ai/flows/generate-polyfills';
 import { analyzeGitHubRepository, AnalyzeGitHubRepositoryOutput } from '@/ai/flows/analyze-github-repo';
+import { chatWithCode, ChatMessage } from '@/ai/flows/chat-with-code';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CodeEditor } from '@/components/code-editor';
 import { BrowserSelector } from '@/components/browser-selector';
@@ -22,6 +23,7 @@ import { Polyfill, Suggestion } from '@/ai/schemas';
 import { CompatibilityChart } from '@/components/compatibility-chart';
 import { SuggestionCard } from '@/components/suggestion-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ChatPanel } from '@/components/chat-panel';
 
 const defaultCodeSnippet = `// Paste your code here for analysis...
 // Example JavaScript:
@@ -73,10 +75,9 @@ export default function Home() {
   const [compatibilityResult, setCompatibilityResult] = useState<CheckCodeCompatibilityOutput | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [polyfills, setPolyfills] = useState<Polyfill[]>([]);
-
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('compatibility');
 
   const handleAnalyze = async () => {
     if (activeCodeTab === 'snippet' && !code.trim()) {
@@ -114,6 +115,7 @@ export default function Home() {
     try {
         let analysisResult: AnalyzeGitHubRepositoryOutput;
         const beautifyOptions = { indent_size: 2, space_in_empty_paren: true };
+        const analysisCode = activeCodeTab === 'snippet' ? code : repoUrl;
 
         if (activeCodeTab === 'repository') {
             analysisResult = await analyzeGitHubRepository({
@@ -121,7 +123,6 @@ export default function Home() {
                 targetBrowsers: selectedBrowsers.join(', '),
             });
         } else {
-            const analysisCode = code;
             const [compat, sugg, poly] = await Promise.all([
                 checkCodeCompatibility({ codeSnippet: analysisCode, targetBrowsers: selectedBrowsers.join(', ') }),
                 suggestCompatibleSnippets({ code: analysisCode, targetBrowsers: selectedBrowsers.join(', ') }),
@@ -168,6 +169,29 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  const handleChatSubmit = async (message: string, history: ChatMessage[]): Promise<ChatMessage> => {
+    try {
+        const response = await chatWithCode({
+            question: message,
+            code: activeCodeTab === 'snippet' ? code : 'See repository analysis context.',
+            analysisReport: compatibilityResult?.compatibilityReport || 'Not available.',
+            suggestions: JSON.stringify(suggestions),
+            polyfills: JSON.stringify(polyfills),
+            history: history
+        });
+        return { role: 'model', content: response.answer };
+    } catch(e) {
+        const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+        toast({
+            variant: 'destructive',
+            title: 'Chat Error',
+            description: `Could not get a response from the AI. ${errorMessage}`,
+        });
+        return { role: 'model', content: 'Sorry, I encountered an error and could not respond.' };
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 sm:p-6 md:p-8">
@@ -221,135 +245,141 @@ export default function Home() {
               </CardContent>
             </Card>
           </div>
+          
+          <div className="space-y-8">
+            <Card className="w-full shadow-lg">
+              <CardHeader>
+                  <CardTitle>Compatibility Analysis</CardTitle>
+                  <CardDescription>A detailed breakdown of browser support for the features in your code.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <Tabs defaultValue="compatibility" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="compatibility"><FileText size={16} className="mr-2"/> Report</TabsTrigger>
+                          <TabsTrigger value="suggestions"><Lightbulb size={16} className="mr-2"/> Suggestions</TabsTrigger>
+                          <TabsTrigger value="polyfills"><Puzzle size={16} className="mr-2"/> Polyfills</TabsTrigger>
+                      </TabsList>
+                      <div className="pt-6 min-h-[400px]">
+                          {loading && (
+                              <div className="space-y-4 pt-4">
+                                  <Skeleton className="h-6 w-3/4" />
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-4 w-5/6" />
+                                  <br/>
+                                  <Skeleton className="h-6 w-1/2" />
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-4 w-full" />
+                              </div>
+                          )}
+                          {error && !loading && (
+                              <div className="text-destructive flex items-center justify-center flex-col h-full min-h-[400px] gap-4"><AlertCircle size={48}/> <span className="text-lg font-semibold">Error analyzing code</span><p className="text-sm text-center max-w-sm">{error}</p></div>
+                          )}
+                          {!loading && !error && (
+                              <>
+                                  <TabsContent value="compatibility">
+                                      {compatibilityResult ? (
+                                          <div className="space-y-6">
+                                              {compatibilityResult.browserData && compatibilityResult.browserData.length > 0 && (
+                                                  <CompatibilityChart data={compatibilityResult.browserData} />
+                                              )}
+                                              <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-table:text-foreground">
+                                                  <ReactMarkdown
+                                                      components={{
+                                                          code({ node, className, children, ...props }) {
+                                                              const match = /language-(\w+)/.exec(className || '');
+                                                              const code = String(children).replace(/\n$/, '');
+                                                              return match ? (
+                                                                  <div className="my-4 rounded-xl border border-border shadow-lg overflow-hidden">
+                                                                  <ReadOnlyCodeEditor value={code} />
+                                                                  </div>
+                                                              ) : (
+                                                                  <code className={className} {...props}>
+                                                                      {children}
+                                                                  </code>
+                                                              );
+                                                          },
+                                                          table: ({node, ...props}) => <Table {...props} />,
+                                                          thead: ({node, ...props}) => <TableHeader {...props} />,
+                                                          tbody: ({node, ...props}) => <TableBody {...props} />,
+                                                          tr: ({node, ...props}) => <TableRow {...props} />,
+                                                          th: ({node, ...props}) => <TableHead {...props} />,
+                                                          td: ({node, ...props}) => <TableCell {...props} />,
+                                                      }}
+                                                  >
+                                                      {compatibilityResult.compatibilityReport}
+                                                  </ReactMarkdown>
+                                              </div>
+                                          </div>
+                                      ) : (
+                                          <EmptyState 
+                                              icon={<FileText className="h-12 w-12 text-primary" />}
+                                              title="Ready to Analyze"
+                                              description="Your compatibility report will appear here once you run an analysis."
+                                          />
+                                      )}
+                                  </TabsContent>
+                                  <TabsContent value="suggestions">
+                                      {suggestions.length > 0 ? (
+                                          <div className="space-y-6">
+                                              {suggestions.map((suggestion, index) => (
+                                                  <SuggestionCard key={index} suggestion={suggestion} />
+                                              ))}
+                                          </div>
+                                      ) : (
+                                          <EmptyState 
+                                              icon={<Lightbulb className="h-12 w-12 text-primary" />}
+                                              title="No Suggestions Yet"
+                                              description="AI-powered suggestions for improving compatibility will be shown here."
+                                          />
+                                      )}
+                                  </TabsContent>
+                                  <TabsContent value="polyfills">
+                                      {polyfills.length > 0 ? (
+                                          <div className="space-y-6">
+                                              {polyfills.map((polyfill, index) => (
+                                                  <div key={index}>
+                                                       {polyfill.explanation && (
+                                                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground mb-2">
+                                                              <ReactMarkdown>
+                                                                  {polyfill.explanation}
+                                                              </ReactMarkdown>
+                                                          </div>
+                                                      )}
+                                                      {(polyfill.code && polyfill.code.trim() !== '' && !polyfill.code.trim().startsWith('//')) ? (
+                                                          <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
+                                                              <ReadOnlyCodeEditor value={polyfill.code} filePath={polyfill.filePath}/>
+                                                          </div>
+                                                      ) : null}
+                                                  </div>
+                                              ))}
+                                              {polyfills.every(p => !p.code || p.code.trim() === '' || p.code.trim().startsWith('//')) && (
+                                                  <EmptyState 
+                                                      icon={<Puzzle className="h-12 w-12 text-primary" />}
+                                                      title="No polyfills needed"
+                                                      description="Based on your code and selected browsers, no polyfills are required."
+                                                  />
+                                              )}
+                                          </div>
+                                       ) : (
+                                          <EmptyState 
+                                              icon={<Puzzle className="h-12 w-12 text-primary" />}
+                                              title="No polyfills generated yet"
+                                              description="Polyfills for any unsupported features will be shown here after analysis."
+                                          />
+                                      )}
+                                  </TabsContent>
+                              </>
+                          )}
+                      </div>
+                  </Tabs>
+              </CardContent>
+            </Card>
 
-          <Card className="w-full shadow-lg">
-            <CardHeader>
-                <CardTitle>Compatibility Report</CardTitle>
-                <CardDescription>Get a detailed analysis of browser support for the features in your code.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Tabs defaultValue="compatibility" className="w-full" onValueChange={setActiveTab}>
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="compatibility"><FileText size={16} className="mr-2"/> Report</TabsTrigger>
-                        <TabsTrigger value="suggestions"><Lightbulb size={16} className="mr-2"/> Suggestions</TabsTrigger>
-                        <TabsTrigger value="polyfills"><Puzzle size={16} className="mr-2"/> Polyfills</TabsTrigger>
-                    </TabsList>
-                    <div className="pt-6 min-h-[400px]">
-                        {loading && (
-                            <div className="space-y-4 pt-4">
-                                <Skeleton className="h-6 w-3/4" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-5/6" />
-                                <br/>
-                                <Skeleton className="h-6 w-1/2" />
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-full" />
-                            </div>
-                        )}
-                        {error && !loading && (
-                            <div className="text-destructive flex items-center justify-center flex-col h-full min-h-[400px] gap-4"><AlertCircle size={48}/> <span className="text-lg font-semibold">Error analyzing code</span><p className="text-sm text-center max-w-sm">{error}</p></div>
-                        )}
-                        {!loading && !error && (
-                            <>
-                                <TabsContent value="compatibility">
-                                    {compatibilityResult ? (
-                                        <div className="space-y-6">
-                                            {compatibilityResult.browserData && compatibilityResult.browserData.length > 0 && (
-                                                <CompatibilityChart data={compatibilityResult.browserData} />
-                                            )}
-                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-table:text-foreground">
-                                                <ReactMarkdown
-                                                    components={{
-                                                        code({ node, className, children, ...props }) {
-                                                            const match = /language-(\w+)/.exec(className || '');
-                                                            const code = String(children).replace(/\n$/, '');
-                                                            return match ? (
-                                                                <div className="my-4 rounded-xl border border-border shadow-lg overflow-hidden">
-                                                                <ReadOnlyCodeEditor value={code} />
-                                                                </div>
-                                                            ) : (
-                                                                <code className={className} {...props}>
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        },
-                                                        table: ({node, ...props}) => <Table {...props} />,
-                                                        thead: ({node, ...props}) => <TableHeader {...props} />,
-                                                        tbody: ({node, ...props}) => <TableBody {...props} />,
-                                                        tr: ({node, ...props}) => <TableRow {...props} />,
-                                                        th: ({node, ...props}) => <TableHead {...props} />,
-                                                        td: ({node, ...props}) => <TableCell {...props} />,
-                                                    }}
-                                                >
-                                                    {compatibilityResult.compatibilityReport}
-                                                </ReactMarkdown>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <EmptyState 
-                                            icon={<FileText className="h-12 w-12 text-primary" />}
-                                            title="Ready to Analyze"
-                                            description="Your compatibility report will appear here once you run an analysis."
-                                        />
-                                    )}
-                                </TabsContent>
-                                <TabsContent value="suggestions">
-                                    {suggestions.length > 0 ? (
-                                        <div className="space-y-6">
-                                            {suggestions.map((suggestion, index) => (
-                                                <SuggestionCard key={index} suggestion={suggestion} />
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <EmptyState 
-                                            icon={<Lightbulb className="h-12 w-12 text-primary" />}
-                                            title="No Suggestions Yet"
-                                            description="AI-powered suggestions for improving compatibility will be shown here."
-                                        />
-                                    )}
-                                </TabsContent>
-                                <TabsContent value="polyfills">
-                                    {polyfills.length > 0 ? (
-                                        <div className="space-y-6">
-                                            {polyfills.map((polyfill, index) => (
-                                                <div key={index}>
-                                                     {polyfill.explanation && (
-                                                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground mb-2">
-                                                            <ReactMarkdown>
-                                                                {polyfill.explanation}
-                                                            </ReactMarkdown>
-                                                        </div>
-                                                    )}
-                                                    {(polyfill.code && polyfill.code.trim() !== '' && !polyfill.code.trim().startsWith('//')) ? (
-                                                        <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
-                                                            <ReadOnlyCodeEditor value={polyfill.code} filePath={polyfill.filePath}/>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            ))}
-                                            {polyfills.every(p => !p.code || p.code.trim() === '' || p.code.trim().startsWith('//')) && (
-                                                <EmptyState 
-                                                    icon={<Puzzle className="h-12 w-12 text-primary" />}
-                                                    title="No polyfills needed"
-                                                    description="Based on your code and selected browsers, no polyfills are required."
-                                                />
-                                            )}
-                                        </div>
-                                     ) : (
-                                        <EmptyState 
-                                            icon={<Puzzle className="h-12 w-12 text-primary" />}
-                                            title="No polyfills generated yet"
-                                            description="Polyfills for any unsupported features will be shown here after analysis."
-                                        />
-                                    )}
-                                </TabsContent>
-                            </>
-                        )}
-                    </div>
-                </Tabs>
-            </CardContent>
-          </Card>
+            {compatibilityResult && !loading && !error && (
+              <ChatPanel onSubmit={handleChatSubmit}/>
+            )}
+          </div>
         </div>
       </main>
     </div>
