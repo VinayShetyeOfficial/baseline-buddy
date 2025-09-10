@@ -3,6 +3,7 @@ import { z } from "genkit";
 export const SuggestionSchema = z.object({
   filePath: z.string().optional().describe('The path to the file where the suggestion applies. Only present when analyzing a repository.'),
   lineNumber: z.number().optional().describe('The line number in the file where the suggestion applies. Only present when analyzing a repository.'),
+  originalCode: z.string().describe('The original, incompatible code snippet that should be replaced.'),
   code: z.string().describe('The compatible code snippet.'),
   explanation: z
     .string()

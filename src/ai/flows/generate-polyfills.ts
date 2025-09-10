@@ -39,9 +39,9 @@ const prompt = ai.definePrompt({
   output: {schema: GeneratePolyfillsOutputSchema},
   prompt: `You are a polyfill generator expert.
 
-You will generate polyfills for the unsupported features in the target browsers based on the baseline data. The generated code must be well-formatted JavaScript. For each polyfill, provide a clear explanation of what it does and which feature it addresses.
+You will generate polyfills for the unsupported features in the target browsers based on the baseline data. The generated code must be well-formatted, raw, unescaped JavaScript. For each polyfill, provide a clear explanation of what it does and which feature it addresses.
 
-When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If a polyfill is needed for a specific file, you MUST include the 'filePath' field in your response for that polyfill, extracting the path from the comment.
+When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If a polyfill is needed for a specific file, you MUST include the 'filePath' and 'lineNumber' field in your response for that polyfill, extracting the path and line number from the comment.
 
 If no polyfills are required for the given code and target browsers, return an array with a single item containing an explanatory comment in the 'code' field and a clear explanation.
 

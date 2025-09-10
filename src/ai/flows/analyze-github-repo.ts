@@ -164,8 +164,10 @@ const analysisPrompt = ai.definePrompt({
     Your task is to perform three actions in a single response, provided in a single JSON object:
     1.  **Generate a Compatibility Report:** Create a detailed, well-structured Markdown report about the browser compatibility of the code for the specified target browsers.
     2.  **Provide Browser Data for Charting:** An array of objects, where each object represents a target browser and contains 'browser' (string), 'isSupported' (boolean), and 'coverage' (number) fields.
-    3.  **Suggest Compatible Snippets:** Analyze the code and provide an array of suggestions for improving compatibility. For each suggestion, you MUST include the 'filePath' and the starting 'lineNumber' for the suggested change, extracting it from the preceding file comment and line number.
+    3.  **Suggest Compatible Snippets:** Analyze the code and provide an array of suggestions for improving compatibility. For each suggestion, you MUST include the 'originalCode' that needs to be replaced, the 'filePath' and the starting 'lineNumber' for the suggested change, extracting it from the preceding file comment and line number.
     4.  **Generate Polyfills:** Identify features that are not supported by the target browsers and generate an array of the necessary polyfills. For each polyfill, you MUST include the 'filePath' and the 'lineNumber' where the unsupported feature is used.
+
+    IMPORTANT: For any code you generate (suggestions or polyfills), it must be clean, raw, and not escaped in any way.
 
     Code Snippet:
     \`\`\`
@@ -213,7 +215,7 @@ export async function analyzeGitHubRepository(
   
   const result = await analyzeRepositoryFlow(input);
   
-  const addRepoUrl = (item: {filePath?: string, lineNumber?: number}) => {
+  const addRepoUrl = (item: {originalCode: string, filePath?: string, lineNumber?: number, code: string, explanation: string}) => {
     let finalFilePath = item.filePath ? `${input.repoUrl}/blob/HEAD/${item.filePath}`: undefined;
     if (finalFilePath && item.lineNumber) {
         finalFilePath += `#L${item.lineNumber}`;

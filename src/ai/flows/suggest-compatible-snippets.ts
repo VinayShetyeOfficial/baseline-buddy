@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -49,13 +50,18 @@ const prompt = ai.definePrompt({
 
   Analyze the following code and suggest compatible code snippets for the target browsers.
 
-  When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If you make a suggestion for a specific file, you MUST include the 'filePath' field in your response for that suggestion, extracting the path from the comment.
+  When analyzing a full repository, the code snippet will contain file paths in comments like '// File: path/to/file.js'. If you make a suggestion for a specific file, you MUST include the 'filePath' and starting 'lineNumber' field in your response for that suggestion, extracting the path and line number from the comment.
+  
+  For each suggestion, you must provide:
+  - The original, incompatible code in the 'originalCode' field.
+  - The new, compatible code snippet in the 'code' field.
+  - A clear explanation of why the change is needed in the 'explanation' field.
+
+  Ensure all code is clean, raw, and unescaped.
+  If the code is already fully compatible with the specified browsers, return an empty array for suggestions.
 
   Code: {{{code}}}
   Target Browsers: {{{targetBrowsers}}}
-
-  For each suggestion, provide the compatible code snippet and a clear explanation of why the change is needed.
-  If the code is already fully compatible with the specified browsers, return an empty array for suggestions.
   `,
 });
 

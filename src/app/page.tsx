@@ -20,6 +20,7 @@ import { ReadOnlyCodeEditor } from '@/components/read-only-code-editor';
 import { js_beautify } from 'js-beautify';
 import { Polyfill, Suggestion } from '@/ai/schemas';
 import { CompatibilityChart } from '@/components/compatibility-chart';
+import { SuggestionCard } from '@/components/suggestion-card';
 
 
 const defaultCodeSnippet = `// Paste your code here for analysis...
@@ -133,6 +134,7 @@ export default function Home() {
         
         const beautifiedSuggestions = analysisResult.suggestions.suggestions.map(s => ({
             ...s,
+            originalCode: s.originalCode ? js_beautify(s.originalCode, beautifyOptions) : '',
             code: js_beautify(s.code, beautifyOptions)
         }));
         setSuggestions(beautifiedSuggestions);
@@ -290,16 +292,7 @@ export default function Home() {
                                     {suggestions.length > 0 ? (
                                         <div className="space-y-6">
                                             {suggestions.map((suggestion, index) => (
-                                                <div key={index}>
-                                                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground mb-2">
-                                                        <ReactMarkdown>
-                                                            {suggestion.explanation}
-                                                        </ReactMarkdown>
-                                                    </div>
-                                                     <div className="h-full rounded-xl border border-border shadow-lg bg-[#0f172b] flex flex-col">
-                                                        <ReadOnlyCodeEditor value={suggestion.code} filePath={suggestion.filePath} />
-                                                    </div>
-                                                </div>
+                                                <SuggestionCard key={index} suggestion={suggestion} />
                                             ))}
                                         </div>
                                     ) : (
