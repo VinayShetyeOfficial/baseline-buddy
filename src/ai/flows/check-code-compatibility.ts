@@ -24,7 +24,7 @@ export type CheckCodeCompatibilityInput = z.infer<typeof CheckCodeCompatibilityI
 const BrowserCompatibilitySchema = z.object({
   browser: z.string().describe("The name of the browser (e.g., 'Chrome', 'Firefox')."),
   isSupported: z.boolean().describe("Whether the features in the code snippet are fully supported by this browser."),
-  coverage: z.number().describe("The estimated percentage of global users for this browser version."),
+  coverage: z.number().describe("The estimated percentage of global users for this browser version. This should always be a number, regardless of support status."),
 });
 export type BrowserCompatibilityData = z.infer<typeof BrowserCompatibilitySchema>;
 
@@ -49,7 +49,7 @@ You will analyze the provided code snippet against the specified target browsers
 1.  **browserData**: An array of objects, where each object represents a target browser and contains:
     *   'browser': The name of the browser.
     *   'isSupported': A boolean indicating if the features in the code are fully supported.
-    *   'coverage': An estimated percentage of global user coverage for that browser.
+    *   'coverage': An estimated percentage of global user coverage for that browser. This value must always be a number, even if support is false.
 
 2.  **compatibilityReport**: A detailed compatibility report in well-structured Markdown. The report should be easy to read, with clear paragraphs, headings, and lists. Use backticks for inline code.
 

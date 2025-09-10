@@ -57,7 +57,7 @@ const ConsolidatedAnalysisOutputSchema = z.object({
         browser: z.string(),
         isSupported: z.boolean(),
         coverage: z.number(),
-    })).describe('An array of objects containing browser compatibility data for charting.'),
+    })).describe('An array of objects containing browser compatibility data for charting. The coverage field should represent the global usage share of the browser, regardless of support status.'),
     suggestions: z.array(SuggestionSchema).describe('An array of compatible code snippets with explanations. If none are needed, return an empty array.'),
     polyfills: z.array(PolyfillSchema).describe('An array of polyfills with explanations. If none are needed, return an empty array.'),
 });
@@ -163,7 +163,7 @@ const analysisPrompt = ai.definePrompt({
 
     Your task is to perform three actions in a single response, provided in a single JSON object:
     1.  **Generate a Compatibility Report:** Create a detailed, well-structured Markdown report about the browser compatibility of the code for the specified target browsers.
-    2.  **Provide Browser Data for Charting:** An array of objects, where each object represents a target browser and contains 'browser' (string), 'isSupported' (boolean), and 'coverage' (number) fields.
+    2.  **Provide Browser Data for Charting:** An array of objects, where each object represents a target browser and contains 'browser' (string), 'isSupported' (boolean), and 'coverage' (number) fields. The 'coverage' field must always be a number representing the global usage share of that browser, regardless of its support status.
     3.  **Suggest Compatible Snippets:** Analyze the code and provide an array of suggestions for improving compatibility. For each suggestion, you MUST include the 'originalCode' that needs to be replaced, the 'filePath' and the starting 'lineNumber' for the suggested change, extracting it from the preceding file comment and line number.
     4.  **Generate Polyfills:** Identify features that are not supported by the target browsers and generate an array of the necessary polyfills. For each polyfill, you MUST include the 'filePath' and the 'lineNumber' where the unsupported feature is used.
 

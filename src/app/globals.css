@@ -92,6 +92,22 @@
   .prose :where(code):not(:where([class~="not-prose"] *))::after {
     content: "";
   }
+  .prose table {
+    @apply w-full my-6;
+  }
+  .prose th {
+    @apply border border-border px-4 py-2 text-left font-bold;
+  }
+  .prose td {
+    @apply border border-border px-4 py-2;
+  }
+  .prose thead {
+    @apply border-b border-border;
+  }
+  .prose tbody tr:nth-child(even) {
+    @apply bg-muted/50;
+  }
+
 }
 
 @layer components {

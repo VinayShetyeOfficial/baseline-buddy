@@ -21,7 +21,7 @@ import { js_beautify } from 'js-beautify';
 import { Polyfill, Suggestion } from '@/ai/schemas';
 import { CompatibilityChart } from '@/components/compatibility-chart';
 import { SuggestionCard } from '@/components/suggestion-card';
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const defaultCodeSnippet = `// Paste your code here for analysis...
 // Example JavaScript:
@@ -258,7 +258,7 @@ export default function Home() {
                                             {compatibilityResult.browserData && compatibilityResult.browserData.length > 0 && (
                                                 <CompatibilityChart data={compatibilityResult.browserData} />
                                             )}
-                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground">
+                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-ul:text-foreground prose-table:text-foreground">
                                                 <ReactMarkdown
                                                     components={{
                                                         code({ node, className, children, ...props }) {
@@ -274,6 +274,12 @@ export default function Home() {
                                                                 </code>
                                                             );
                                                         },
+                                                        table: ({node, ...props}) => <Table {...props} />,
+                                                        thead: ({node, ...props}) => <TableHeader {...props} />,
+                                                        tbody: ({node, ...props}) => <TableBody {...props} />,
+                                                        tr: ({node, ...props}) => <TableRow {...props} />,
+                                                        th: ({node, ...props}) => <TableHead {...props} />,
+                                                        td: ({node, ...props}) => <TableCell {...props} />,
                                                     }}
                                                 >
                                                     {compatibilityResult.compatibilityReport}

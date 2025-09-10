@@ -2,9 +2,9 @@
 'use client';
 
 import * as React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 import { BrowserCompatibilityData } from '@/ai/flows/check-code-compatibility';
 
 interface CompatibilityChartProps {
@@ -17,10 +17,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="p-2 bg-background border rounded-lg shadow-lg">
         <p className="font-bold">{label}</p>
-        <p className={`text-sm ${data.isSupported ? 'text-green-600' : 'text-red-600'}`}>
-          {data.isSupported ? 'Fully Supported' : 'Not Fully Supported'}
+        <p className={`text-sm ${data.supported ? 'text-green-600' : 'text-red-600'}`}>
+          {data.supported ? 'Fully Supported' : 'Not Fully Supported'}
         </p>
-        <p className="text-sm text-muted-foreground">User Coverage: {data.coverage}%</p>
+        <p className="text-sm text-muted-foreground">User Coverage: {data.Coverage}%</p>
       </div>
     );
   }
@@ -68,7 +68,11 @@ export function CompatibilityChart({ data }: CompatibilityChartProps) {
                     <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}%`} />
                     <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--muted))' }} />
                     <Legend iconType="circle" iconSize={8} />
-                    <Bar dataKey="Coverage" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Coverage" radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.supported ? 'hsl(var(--primary))' : 'hsl(var(--primary) / 0.3)'} />
+                      ))}
+                    </Bar>
                 </BarChart>
             </ResponsiveContainer>
         </div>
