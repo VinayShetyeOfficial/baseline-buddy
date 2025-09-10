@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, MessageSquare, Send } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '@/ai/flows/chat-with-code';
-import { ChatMessage } from './chat-message';
+import { DebugChatMessage } from './debug-chat-message';
 import { BouncingDots } from './bouncing-dots';
 
 interface ChatPanelProps {
@@ -65,11 +65,11 @@ export function ChatPanel({ onSubmit }: ChatPanelProps) {
               </div>
             ) : (
               messages.map((msg, i) => (
-                <ChatMessage key={i} role={msg.role} content={msg.content} />
+                <DebugChatMessage key={i} role={msg.role} content={msg.content} />
               ))
             )}
             {isLoading && (
-               <ChatMessage role="model" content={<BouncingDots />} />
+               <DebugChatMessage role="model" content={<BouncingDots />} />
             )}
           </div>
           <div className="border-t bg-background/50 p-4">
