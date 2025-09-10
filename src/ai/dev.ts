@@ -1,0 +1,6 @@
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/generate-polyfills.ts';
+import '@/ai/flows/suggest-compatible-snippets.ts';
+import '@/ai/flows/check-code-compatibility.ts';
