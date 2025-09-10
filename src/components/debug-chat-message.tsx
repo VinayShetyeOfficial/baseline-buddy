@@ -61,7 +61,7 @@ const parseCustomFormat = (text: string): React.ReactNode => {
       let element: React.ReactNode = content;
       
       if (openMarkers.includes('`')) {
-        element = <code style={{ fontFamily: '"Source Code Pro", monospace', backgroundColor: '#f0f0f0', padding: '2px 4px', borderRadius: '3px' }}>{element}</code>;
+        element = <code style={{ fontFamily: '"Source Code Pro", monospace', backgroundColor: '#e8e5ff', padding: '2px 4px', borderRadius: '3px' }}>{element}</code>;
       }
       if (openMarkers.includes('_')) {
         element = <em>{element}</em>;
