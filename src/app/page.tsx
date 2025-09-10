@@ -24,6 +24,7 @@ import { CompatibilityChart } from '@/components/compatibility-chart';
 import { SuggestionCard } from '@/components/suggestion-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChatPanel } from '@/components/chat-panel';
+import { FloatingChat } from '@/components/floating-chat';
 
 const defaultCodeSnippet = `// Paste your code here for analysis...
 // Example JavaScript:
@@ -382,6 +383,16 @@ export default function Home() {
           </div>
         </div>
       </main>
+      
+      {/* Always-available floating chat */}
+      <FloatingChat 
+        analysisContext={compatibilityResult ? {
+          code: activeCodeTab === 'snippet' ? code : `Repository: ${repoUrl}`,
+          analysisReport: compatibilityResult.compatibilityReport || 'Not available.',
+          suggestions: JSON.stringify(suggestions),
+          polyfills: JSON.stringify(polyfills)
+        } : undefined}
+      />
     </div>
   );
 }

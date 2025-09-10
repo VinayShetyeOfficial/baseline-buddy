@@ -137,6 +137,12 @@
   .code-block-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground) / 0.8);
   }
+
+  /* Floating chat launcher icon size */
+  .chat-launcher-icon {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
 }
 
 /* Custom scrollbar for CodeMirror */
