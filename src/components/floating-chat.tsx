@@ -84,7 +84,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 h-20 w-20 rounded-full bg-primary hover:bg-primary/90 shadow-lg z-50"
+          className="fixed bottom-5 right-5 h-16 w-16 rounded-full bg-primary hover:bg-primary/90 shadow-lg z-50"
           size="icon"
         >
           <svg className="chat-launcher-icon text-white" viewBox="0 0 122.88 119.35" aria-label="Open chat">
@@ -95,13 +95,15 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-5 right-5 w-96 h-[32rem] shadow-xl z-50 flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-primary text-primary-foreground rounded-t-lg">
-            <div className="flex items-center space-x-2">
-              <Bot className="h-5 w-5" />
+        <Card className="fixed bottom-5 right-5 w-[30rem] h-[36rem] shadow-xl z-50 flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 bg-primary text-primary-foreground rounded-t-lg shadow-sm">
+            <div className="flex items-center space-x-3">
+              <div className="rounded-full bg-primary-foreground/20 p-2">
+                <Bot className="h-6 w-6" />
+              </div>
               <div>
-                <h3 className="font-semibold text-sm">Baseline Buddy</h3>
-                <p className="text-xs opacity-90">
+                <h3 className="font-semibold text-base leading-none">Baseline Buddy</h3>
+                <p className="text-xs opacity-90 mt-0.5">
                   {analysisContext ? "Ask me about the report" : "Web compatibility assistant"}
                 </p>
               </div>
@@ -110,15 +112,15 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
-              className="h-6 w-6 text-primary-foreground hover:bg-primary-foreground/20"
+              className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </CardHeader>
           
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[24rem]">
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[28rem] chat-scrollbar">
               {chatHistory.map((message, index) => (
                 <DebugChatMessage
                   key={index}
