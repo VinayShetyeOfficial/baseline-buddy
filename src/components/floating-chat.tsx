@@ -6,9 +6,10 @@ import { chatWithCode, ChatMessage } from '@/ai/flows/chat-with-code';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { X, Send, Bot } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { X, Send, Bot, Loader2 } from 'lucide-react';
 import { DebugChatMessage } from '@/components/debug-chat-message';
+import { BouncingDots } from '@/components/bouncing-dots';
 
 interface FloatingChatProps {
   analysisContext?: {
@@ -35,7 +36,8 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
     setChatHistory([{ role: 'model', content: welcomeMessage }]);
   }, [analysisContext]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
@@ -71,12 +73,6 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
 
   return (
     <>
@@ -95,7 +91,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
 
       {/* Chat Window */}
       {isOpen && (
-        <Card className="fixed bottom-5 right-5 w-[30rem] h-[36rem] shadow-xl z-50 flex flex-col">
+        <Card className="fixed bottom-5 right-5 w-[30rem] h-auto shadow-xl z-50 flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 px-4 py-3 bg-primary text-primary-foreground rounded-t-lg shadow-sm">
             <div className="flex items-center space-x-3">
               <div className="rounded-full bg-primary-foreground/20 p-2">
@@ -120,7 +116,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
           
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[28rem] chat-scrollbar">
+            <div className="flex-1 space-y-6 overflow-y-auto p-4 chat-scrollbar min-h-[28rem] max-h-[28rem]">
               {chatHistory.map((message, index) => (
                 <DebugChatMessage
                   key={index}
@@ -128,37 +124,41 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
                   content={message.content}
                 />
               ))}
-              
               {isLoading && (
-                <div className="flex items-center space-x-2 text-muted-foreground">
-                  <Bot className="h-4 w-4" />
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                    <div className="w-2 h-2 bg-current rounded-full animate-bounce"></div>
-                  </div>
-                </div>
+                <DebugChatMessage role="model" content={<BouncingDots />} />
               )}
             </div>
             
             {/* Input */}
-            <div className="border-t p-3 flex space-x-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your question..."
-                className="flex-1"
-                disabled={isLoading}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className="shrink-0"
+            <div className="border-t bg-background/50 p-4">
+              <form
+                onSubmit={handleSendMessage}
+                className="flex w-full items-center gap-2 rounded-md border p-1.5 pr-2"
               >
-                <Send className="h-4 w-4" />
-              </Button>
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e as any);
+                    }
+                  }}
+                  placeholder="Ask a follow-up question..."
+                  className="flex-1 resize-none border-0 bg-transparent shadow-none chat-textarea chat-input-textarea"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  aria-label="Send message"
+                  size="icon"
+                  className="h-full aspect-square shrink-0 rounded-md"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </form>
             </div>
           </CardContent>
         </Card>
