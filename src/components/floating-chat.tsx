@@ -7,7 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Send, Bot, Loader2 } from 'lucide-react';
+import { X, Send, Bot, Loader2, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DebugChatMessage } from '@/components/debug-chat-message';
 import { BouncingDots } from '@/components/bouncing-dots';
 
@@ -28,13 +29,24 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Add welcome message when component mounts or context changes
+    // Only add welcome message when component first mounts (empty chat history)
+    if (chatHistory.length === 0) {
+      const welcomeMessage = analysisContext 
+        ? "Hi there! I'm Baseline Buddy. Ask me anything about this analysis report."
+        : "Hi! I'm Baseline Buddy. I can help you with web compatibility questions, code analysis, and browser support. Try analyzing some code first, or ask me anything!";
+      
+      setChatHistory([{ role: 'model', content: welcomeMessage }]);
+    }
+  }, []); // Empty dependency array - only run on mount
+
+  // Add a function to clear chat history
+  const clearChatHistory = () => {
     const welcomeMessage = analysisContext 
       ? "Hi there! I'm Baseline Buddy. Ask me anything about this analysis report."
       : "Hi! I'm Baseline Buddy. I can help you with web compatibility questions, code analysis, and browser support. Try analyzing some code first, or ask me anything!";
     
     setChatHistory([{ role: 'model', content: welcomeMessage }]);
-  }, [analysisContext]);
+  };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -104,14 +116,42 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+                    title="Clear chat history"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Clear Chat History</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to clear the chat history? This action cannot be undone and will remove all your previous conversations with Baseline Buddy.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>No, Keep History</AlertDialogCancel>
+                    <AlertDialogAction onClick={clearChatHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Yes, Clear History
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </CardHeader>
           
           <CardContent className="flex-1 flex flex-col p-0">

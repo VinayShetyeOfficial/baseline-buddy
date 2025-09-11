@@ -377,9 +377,10 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {compatibilityResult && !loading && !error && (
+            {/* Static chat UI commented out - using floating chat instead */}
+            {/* {compatibilityResult && !loading && !error && (
               <ChatPanel onSubmit={handleChatSubmit}/>
-            )}
+            )} */}
           </div>
         </div>
       </main>
