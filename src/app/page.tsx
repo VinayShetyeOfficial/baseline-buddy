@@ -262,15 +262,49 @@ export default function Home() {
                       </TabsList>
                       <div className="pt-6 min-h-[400px]">
                           {loading && (
-                              <div className="space-y-4 pt-4">
-                                  <Skeleton className="h-6 w-3/4" />
-                                  <Skeleton className="h-4 w-full" />
-                                  <Skeleton className="h-4 w-full" />
-                                  <Skeleton className="h-4 w-5/6" />
-                                  <br/>
-                                  <Skeleton className="h-6 w-1/2" />
-                                  <Skeleton className="h-4 w-full" />
-                                  <Skeleton className="h-4 w-full" />
+                              <div className="space-y-8 pt-4">
+                                  {/* Chart Section Skeleton */}
+                                  <div className="rounded-xl border border-border shadow-sm p-6 space-y-4">
+                                      {/* Title */}
+                                      <Skeleton className="h-6 w-1/3" />
+                                      {/* Subtitle */}
+                                      <Skeleton className="h-4 w-2/3" />
+
+                                      {/* Chart */}
+                                      <div className="flex items-center justify-center">
+                                          <Skeleton className="h-48 w-full rounded-md" />
+                                      </div>
+
+                                      {/* Coverage label */}
+                                      <Skeleton className="h-4 w-24 mx-auto" />
+
+                                      {/* Browser pills */}
+                                      <div className="flex gap-3 justify-center pt-4">
+                                          <Skeleton className="h-8 w-20 rounded-full" />
+                                          <Skeleton className="h-8 w-20 rounded-full" />
+                                          <Skeleton className="h-8 w-20 rounded-full" />
+                                          <Skeleton className="h-8 w-20 rounded-full" />
+                                      </div>
+                                  </div>
+
+                                  {/* Context Section Skeleton */}
+                                  <div className="space-y-6">
+                                      {/* Report heading */}
+                                      <Skeleton className="h-7 w-1/2" />
+                                      {/* Paragraph lines */}
+                                      <Skeleton className="h-4 w-full" />
+                                      <Skeleton className="h-4 w-11/12" />
+                                      <Skeleton className="h-4 w-4/5" />
+
+                                      {/* Sub-section heading */}
+                                      <Skeleton className="h-6 w-1/3 mt-4" />
+                                      {/* Bullet lines */}
+                                      <div className="space-y-2">
+                                          <Skeleton className="h-4 w-full" />
+                                          <Skeleton className="h-4 w-10/12" />
+                                          <Skeleton className="h-4 w-3/4" />
+                                      </div>
+                                  </div>
                               </div>
                           )}
                           {error && !loading && (
