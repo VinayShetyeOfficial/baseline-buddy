@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { chatWithCode, ChatMessage } from '@/ai/flows/chat-with-code';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,15 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const messageAreaRef = useRef<HTMLDivElement>(null);
+  const savedScrollPosition = useRef<number>(0);
+
+  // Function to scroll to bottom of chat
+  const scrollToBottom = () => {
+    if (messageAreaRef.current) {
+      messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
+    }
+  };
 
   useEffect(() => {
     // Only add welcome message when component first mounts (empty chat history)
@@ -39,6 +48,18 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
     }
   }, []); // Empty dependency array - only run on mount
 
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatHistory]);
+
+  // Auto-scroll to bottom when loading state changes (to show typing indicator)
+  useEffect(() => {
+    if (isLoading) {
+      scrollToBottom();
+    }
+  }, [isLoading]);
+
   // Add a function to clear chat history
   const clearChatHistory = () => {
     const welcomeMessage = analysisContext 
@@ -46,6 +67,25 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
       : "Hi! I'm Baseline Buddy. I can help you with web compatibility questions, code analysis, and browser support. Try analyzing some code first, or ask me anything!";
     
     setChatHistory([{ role: 'model', content: welcomeMessage }]);
+  };
+
+  // Function to open confirmation dialog
+  const openClearConfirmation = () => {
+    // Save current scroll position before opening dialog
+    if (messageAreaRef.current) {
+      savedScrollPosition.current = messageAreaRef.current.scrollTop;
+    }
+    setShowClearConfirmation(true);
+    // Don't scroll to top - keep current position so background shows current messages
+  };
+
+  // Function to close confirmation dialog and restore scroll position
+  const closeClearConfirmation = () => {
+    setShowClearConfirmation(false);
+    // Restore previous scroll position after dialog closes
+    if (messageAreaRef.current) {
+      messageAreaRef.current.scrollTop = savedScrollPosition.current;
+    }
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -120,7 +160,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowClearConfirmation(true)}
+                onClick={openClearConfirmation}
                 className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
                 title="Clear chat history"
               >
@@ -137,9 +177,9 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
             </div>
           </CardHeader>
           
-          <CardContent className="flex-1 flex flex-col p-0">
+          <CardContent className="flex-1 flex flex-col p-0 relative">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 chat-scrollbar min-h-[28rem] max-h-[28rem] relative">
+            <div ref={messageAreaRef} className="flex-1 p-4 chat-scrollbar min-h-[28rem] max-h-[28rem] overflow-y-auto">
               <div className="space-y-6">
                 {chatHistory.map((message, index) => (
                   <DebugChatMessage
@@ -152,44 +192,44 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
                   <DebugChatMessage role="model" content={<BouncingDots />} />
                 )}
               </div>
-              
-              {/* Clear confirmation overlay - positioned outside space-y-6 container */}
-              {showClearConfirmation && (
-                <div className="absolute inset-0 bg-background/20 backdrop-blur-[1px] flex items-center justify-center z-10">
-                  <div className="bg-background border rounded-lg shadow-lg p-6 max-w-sm mx-4">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-lg font-semibold">Clear Chat History</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Are you sure you want to clear the chat history? This action cannot be undone and will remove all your previous conversations with Baseline Buddy.
-                        </p>
-                      </div>
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowClearConfirmation(false)}
-                          className="text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            clearChatHistory();
-                            setShowClearConfirmation(false);
-                          }}
-                          className="text-xs"
-                        >
-                          Confirm
-                        </Button>
-                      </div>
+            </div>
+            
+            {/* Clear confirmation overlay - positioned only over message area */}
+            {showClearConfirmation && (
+              <div className="absolute top-0 left-0 right-0 bottom-[6.1rem] bg-background/20 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                <div className="bg-background border rounded-lg shadow-lg p-6 max-w-sm mx-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">Clear Chat History</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Are you sure you want to clear the chat history? This action cannot be undone and will remove all your previous conversations with Baseline Buddy.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={closeClearConfirmation}
+                        className="text-xs"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          clearChatHistory();
+                          closeClearConfirmation();
+                        }}
+                        className="text-xs"
+                      >
+                        Confirm
+                      </Button>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
             
             {/* Input */}
             <div className="border-t bg-background/50 p-4">
@@ -199,7 +239,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
                 onClick={() => {
                   // Close confirmation dialog when user clicks on input area
                   if (showClearConfirmation) {
-                    setShowClearConfirmation(false);
+                    closeClearConfirmation();
                   }
                 }}
               >
@@ -215,7 +255,7 @@ export function FloatingChat({ analysisContext }: FloatingChatProps) {
                   onFocus={() => {
                     // Close confirmation dialog when user focuses on textarea
                     if (showClearConfirmation) {
-                      setShowClearConfirmation(false);
+                      closeClearConfirmation();
                     }
                   }}
                   placeholder="Ask a follow-up question..."
